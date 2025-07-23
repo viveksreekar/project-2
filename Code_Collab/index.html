@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CodeCollab - Real-time Collaborative Editor</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Fira Code', monospace;
+            background-color: #1a1b26;
+            color: #c0caf5;
+        }
+        #editor {
+            background-color: #24283b;
+            border-color: #414868;
+            color: #a9b1d6;
+            caret-color: #c0caf5;
+            line-height: 1.6;
+            font-size: 16px;
+        }
+        .status-dot {
+            height: 10px;
+            width: 10px;
+            border-radius: 50%;
+            display: inline-block;
+            animation: pulse 2s infinite;
+        }
+        .status-connected {
+            background-color: #9ece6a;
+        }
+        .status-disconnected {
+            background-color: #f7768e;
+        }
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.5;
+            }
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center min-h-screen p-4">
+
+    <div class="w-full max-w-4xl mx-auto">
+        <header class="mb-4 text-center">
+            <h1 class="text-4xl font-bold text-white">
+                CodeCollab
+            </h1>
+            <p class="text-lg text-gray-400">A Real-time Collaborative Code Editor</p>
+        </header>
+
+        <div id="status-bar" class="flex items-center justify-end mb-2 text-sm">
+            <span id="status-text" class="mr-2 text-gray-400">Connecting...</span>
+            <div id="status-indicator" class="status-dot status-disconnected"></div>
+        </div>
+
+        <div class="w-full h-[60vh] bg-[#24283b] rounded-lg shadow-2xl border border-[#414868]">
+            <textarea
+                id="editor"
+                class="w-full h-full p-4 text-base bg-transparent border-0 rounded-lg resize-none focus:outline-none"
+                spellcheck="false"
+                autocorrect="off"
+                autocapitalize="off"
+            ></textarea>
+        </div>
+
+        <footer class="mt-4 text-center text-gray-500">
+            <p>Changes are synced in real-time with all connected users.</p>
+        </footer>
+    </div>
+
+    <!-- Socket.IO client library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- DOM Elements ---
+            const editor = document.getElementById('editor');
+            const statusText = document.getElementById('status-text');
+            const statusIndicator = document.getElementById('status-indicator');
+
+            // --- WebSocket Connection ---
+            // Connect to the Socket.IO server. By not specifying a URL,
+            // it defaults to connecting to the host that serves the page.
+            const socket = io();
+
+            // --- Event Handlers ---
+
+            // Fired upon a successful connection.
+            socket.on('connect', () => {
+                console.log('Connected to server with ID:', socket.id);
+                updateStatus(true, 'Connected');
+            });
+
+            // Fired upon disconnection.
+            socket.on('disconnect', () => {
+                console.warn('Disconnected from server.');
+                updateStatus(false, 'Disconnected');
+            });
+
+            // Fired on connection error.
+            socket.on('connect_error', (err) => {
+                console.error('Connection failed:', err.message);
+                updateStatus(false, 'Connection Failed');
+            });
+
+            /**
+             * Listens for 'code_update' events from the server.
+             * This event is broadcast by the server whenever another
+             * user makes a change.
+             * @param {string} data - The full code content from the server.
+             */
+            socket.on('code_update', (data) => {
+                // To avoid conflicts and cursor jumps, we only update the editor
+                // if the content is different from the current content.
+                if (editor.value !== data) {
+                    const cursorPos = editor.selectionStart; // Save cursor position
+                    editor.value = data;
+                    editor.selectionEnd = cursorPos; // Restore cursor position
+                }
+            });
+
+            /**
+             * Listens for input events on the textarea.
+             * When the user types, this function emits the full content
+             * of the editor to the server via a 'code_change' event.
+             */
+            editor.addEventListener('input', () => {
+                const text = editor.value;
+                socket.emit('code_change', text);
+            });
+
+            // --- UI Functions ---
+
+            /**
+             * Updates the status indicator and text on the UI.
+             * @param {boolean} isConnected - Whether the socket is connected.
+             * @param {string} text - The status message to display.
+             */
+            function updateStatus(isConnected, text) {
+                statusText.textContent = text;
+                statusIndicator.classList.toggle('status-connected', isConnected);
+                statusIndicator.classList.toggle('status-disconnected', !isConnected);
+            }
+        });
+    </script>
+</body>
+</html>
