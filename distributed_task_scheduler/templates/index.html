@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Distributed Task Scheduler</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .task-card { transition: all 0.3s ease; }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+
+    <div class="container mx-auto max-w-5xl p-8">
+        <header class="text-center mb-10">
+            <h1 class="text-5xl font-bold text-gray-900">Distributed Task Scheduler</h1>
+            <p class="text-xl text-gray-600 mt-2">Submit tasks to be processed by background workers.</p>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <!-- Email Task Form -->
+            <div class="bg-white p-6 rounded-xl shadow-lg">
+                <h2 class="text-2xl font-bold mb-4">Send Email Task</h2>
+                <form id="email-form" class="space-y-4">
+                    <input type="hidden" name="task_type" value="email">
+                    <div>
+                        <label for="recipient" class="block text-sm font-medium text-gray-700">Recipient Email</label>
+                        <input type="email" name="recipient" required class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label for="message" class="block text-sm font-medium text-gray-700">Message</label>
+                        <textarea name="message" rows="3" required class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"></textarea>
+                    </div>
+                    <button type="submit" class="w-full bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                        Queue Email Task
+                    </button>
+                </form>
+            </div>
+
+            <!-- Report Task Form -->
+            <div class="bg-white p-6 rounded-xl shadow-lg">
+                <h2 class="text-2xl font-bold mb-4">Generate Report Task</h2>
+                <form id="report-form" class="space-y-4">
+                    <input type="hidden" name="task_type" value="report">
+                    <div>
+                        <label for="user_id" class="block text-sm font-medium text-gray-700">User ID</label>
+                        <input type="text" name="user_id" required class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label for="report_type" class="block text-sm font-medium text-gray-700">Report Type</label>
+                        <input type="text" name="report_type" value="Quarterly" required class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <button type="submit" class="w-full bg-teal-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500">
+                        Queue Report Task
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Task Monitoring Section -->
+        <footer class="mt-10 bg-white p-6 rounded-xl shadow-lg">
+            <h3 class="text-2xl font-bold mb-4">Queued Tasks</h3>
+            <div id="task-list" class="space-y-3">
+                <p class="text-gray-500">Submitted tasks will appear here...</p>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const emailForm = document.getElementById('email-form');
+            const reportForm = document.getElementById('report-form');
+            const taskList = document.getElementById('task-list');
+
+            const handleSubmit = async (event) => {
+                event.preventDefault();
+                const form = event.target;
+                const formData = new FormData(form);
+                
+                try {
+                    const response = await fetch('/', {
+                        method: 'POST',
+                        body: new URLSearchParams(formData)
+                    });
+
+                    if (response.status === 202) {
+                        const data = await response.json();
+                        addTaskToList(data.taskId);
+                        form.reset();
+                    } else {
+                        alert('Failed to queue task.');
+                    }
+                } catch (error) {
+                    console.error('Error submitting task:', error);
+                    alert('An error occurred.');
+                }
+            };
+
+            emailForm.addEventListener('submit', handleSubmit);
+            reportForm.addEventListener('submit', handleSubmit);
+
+            function addTaskToList(taskId) {
+                if (taskList.children.length === 1 && taskList.children[0].tagName === 'P') {
+                    taskList.innerHTML = '';
+                }
+
+                const taskCard = document.createElement('div');
+                taskCard.id = `task-${taskId}`;
+                taskCard.className = 'task-card bg-gray-50 p-4 rounded-lg border border-gray-200';
+                taskCard.innerHTML = `
+                    <p class="font-mono text-sm text-gray-600">Task ID: ${taskId}</p>
+                    <p class="font-bold text-lg">Status: <span class="status text-yellow-500">PENDING</span></p>
+                    <p class="result text-gray-500 text-sm mt-1"></p>
+                `;
+                taskList.prepend(taskCard);
+
+                pollStatus(taskId);
+            }
+
+            function pollStatus(taskId) {
+                const interval = setInterval(async () => {
+                    try {
+                        const response = await fetch(`/task_status/${taskId}`);
+                        const data = await response.json();
+                        
+                        const taskCard = document.getElementById(`task-${taskId}`);
+                        const statusEl = taskCard.querySelector('.status');
+                        const resultEl = taskCard.querySelector('.result');
+
+                        statusEl.textContent = data.state;
+
+                        if (data.state === 'SUCCESS') {
+                            statusEl.className = 'status text-green-500';
+                            resultEl.textContent = `Result: ${data.result}`;
+                            clearInterval(interval);
+                        } else if (data.state === 'FAILURE') {
+                            statusEl.className = 'status text-red-500';
+                            resultEl.textContent = `Error: ${data.result}`;
+                            clearInterval(interval);
+                        }
+
+                    } catch (error) {
+                        console.error('Status poll failed:', error);
+                        clearInterval(interval);
+                    }
+                }, 2000); // Poll every 2 seconds
+            }
+        });
+    </script>
+</body>
+</html>
