@@ -1,6 +1,6 @@
 # Project-2
 
-#1. CodeCollab - Real-Time Collaborative Code Editor (Python Backend)
+# 1. CodeCollab - Real-Time Collaborative Code Editor (Python Backend) 👨‍💻⚙️👨‍💻</>
 
 CodeCollab is a web application that demonstrates real-time collaboration, allowing multiple users to write and edit code in a shared environment simultaneously. Built with a **Python (Flask)** backend and a modern frontend, it uses **WebSockets** for instantaneous, bi-directional communication.
 
@@ -45,7 +45,7 @@ This project showcases a deep understanding of asynchronous, event-driven archit
     ```
 4.  **Open in Browser:** Navigate to `http://localhost:3000`. Open multiple browser tabs to simulate different users and see the real-time collaboration in action.
 
-#2. API Rate Limiter Middleware (Token Bucket Algorithm)
+# 2. API Rate Limiter Middleware (Token Bucket Algorithm) 📲📊
 
 This project is a Python implementation of a sophisticated **API Rate Limiter** using the **Token Bucket algorithm**. It's designed as a middleware that can be integrated into any web framework (like Flask or FastAPI) to protect API endpoints from overuse, ensure fair usage, and enhance service reliability.
 
@@ -73,7 +73,7 @@ This is a crucial system design component for building robust, production-ready 
 
 
 
-#3. Distributed Task Scheduler with Celery and RabbitMQ
+# 3. Distributed Task Scheduler with Celery and RabbitMQ 💾💻⚙️
 
 This project is a powerful backend system that demonstrates how to build a **distributed task scheduler** for handling long-running, asynchronous jobs. It uses **Celery** as the task queue framework and **RabbitMQ** as the message broker, a standard and robust architecture for building scalable microservices.
 
